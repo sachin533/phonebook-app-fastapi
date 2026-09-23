@@ -1,0 +1,65 @@
+services:
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: phonebook_sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Phonebook@12345}
+      MSSQL_PID: "Express"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+
+  database-init:
+    build:
+      context: .
+      dockerfile: docker/sql/Dockerfile
+    container_name: phonebook_database_init
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Phonebook@12345}
+    depends_on:
+      - sqlserver
+
+  backend:
+    build:
+      context: ./backend
+    container_name: phonebook_backend
+    environment:
+      DB_SERVER: sqlserver
+      DB_PORT: "1433"
+      DB_DATABASE: PhonebookDb
+      DB_USER: sa
+      DB_PASSWORD: ${MSSQL_SA_PASSWORD:-Phonebook@12345}
+      DB_ENCRYPT: "false"
+      DB_TRUST_SERVER_CERTIFICATE: "true"
+      FASTAPI_HOST: 0.0.0.0
+      FASTAPI_PORT: "8000"
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+    depends_on:
+      - database-init
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: ./client
+    container_name: phonebook_frontend
+    expose:
+      - "5173"
+
+  nginx:
+    image: nginx:alpine
+    container_name: phonebook_nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./deploy/nginx-docker.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  sqlserver_data:

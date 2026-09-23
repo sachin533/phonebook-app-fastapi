@@ -1,0 +1,3 @@
+# Keep shell scripts LF-only even when the repo is edited on Windows,
+# so they run inside Linux containers without manual conversion.
+*.sh text eol=lf

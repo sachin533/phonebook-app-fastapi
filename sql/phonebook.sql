@@ -52,7 +52,7 @@ BEGIN
     IF @PageSize > 100 SET @PageSize = 100;
 
     -- Whitelist sort inputs inside the engine: anything unexpected falls back
-    -- to Name ASC. No dynamic SQL is used anywhere here.
+    -- to Name ASC. Only these literals ever reach the ORDER BY clause.
     IF @SortBy NOT IN (N'Name', N'PhoneNumber', N'Email', N'CreatedAt') SET @SortBy = N'Name';
     IF @SortOrder NOT IN (N'ASC', N'DESC') SET @SortOrder = N'ASC';
 
