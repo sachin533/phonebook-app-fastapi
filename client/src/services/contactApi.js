@@ -41,6 +41,19 @@ export async function getSuggestions(term, limit = 8) {
   return parseResponse(await fetch(`${API_BASE}/suggestions?${params}`));
 }
 
+export async function exportContacts() {
+  const res = await fetch(`${API_BASE}/export`);
+  return parseResponse(res);
+}
+
+export async function importContacts(items) {
+  return parseResponse(await fetch(`${API_BASE}/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(items)
+  }));
+}
+
 export async function getContact(id) {
   return parseResponse(await fetch(`${API_BASE}/${id}`));
 }

@@ -35,6 +35,46 @@ class ContactService:
             return []
         return self.repository.get_suggestions(clean, count)
 
+    def export_contacts(self) -> list:
+        return self.repository.get_all()
+
+    def import_contacts(self, items) -> dict:
+        if not isinstance(items, list):
+            raise AppError(400, "Import body must be a JSON array of contacts.")
+        if len(items) > 5000:
+            raise AppError(400, "Import is limited to 5000 contacts at a time.")
+        existing_phones = self.repository.get_phone_set()
+        imported = 0
+        skipped = 0
+        errors = []
+        for index, raw in enumerate(items):
+            if not isinstance(raw, dict):
+                errors.append(f"Row {index + 1}: must be a JSON object.")
+                if len(errors) > 50:
+                    break
+                continue
+            check_errors, value = models.validate_contact(raw)
+            if check_errors:
+                errors.append(f"Row {index + 1}: {' '.join(check_errors)}")
+                if len(errors) > 50:
+                    break
+                continue
+            if value["phoneNumber"] in existing_phones:
+                skipped += 1  # PhoneNumber is UNIQUE: never duplicate it
+                continue
+            try:
+                self.repository.create(value)
+                existing_phones.add(value["phoneNumber"])
+                imported += 1
+            except AppError as exc:
+                if exc.status_code == 409:
+                    skipped += 1
+                else:
+                    errors.append(f"Row {index + 1}: {exc.message}")
+                    if len(errors) > 50:
+                        break
+        return {"imported": imported, "skipped": skipped, "errors": errors}
+
     def get_by_id(self, contact_id) -> dict | None:
         parsed = models.validate_id(contact_id)
         if not parsed:

@@ -50,6 +50,18 @@ class ContactRepository:
             )
             return [row[0] for row in cursor.fetchall()]
 
+    def get_all(self) -> list:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("EXEC dbo.sp_GetAllContacts;")
+            return [models.to_contact(r) for r in cursor.fetchall()]
+
+    def get_phone_set(self) -> set:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT PhoneNumber FROM dbo.Contacts;")
+            return {row[0] for row in cursor.fetchall()}
+
     def get_by_id(self, contact_id: int) -> dict | None:
         with get_connection() as conn:
             cursor = conn.cursor()

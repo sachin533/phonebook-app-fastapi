@@ -1,4 +1,5 @@
 """Contact routes. Same paths, params, shapes and status codes as Express."""
+import json
 from typing import Optional
 
 from fastapi import APIRouter, Body, Query, Response
@@ -27,6 +28,20 @@ def suggestions(
     limit: Optional[str] = Query(default=None),
 ):
     return _service.get_suggestions(term, limit)
+
+
+@router.get("/export")
+def export_contacts():
+    return Response(
+        content=json.dumps(_service.export_contacts()),
+        media_type="application/json",
+        headers={"Content-Disposition": 'attachment; filename="contacts.json"'},
+    )
+
+
+@router.post("/import")
+def import_contacts(payload: list | dict | None = Body(default=None)):
+    return _service.import_contacts(payload)
 
 
 @router.get("/{contact_id}")

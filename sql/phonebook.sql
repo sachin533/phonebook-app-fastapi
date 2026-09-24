@@ -95,6 +95,18 @@ BEGIN
 END
 GO
 
+-- Full ordered list for JSON export. Single result set, no pagination.
+CREATE OR ALTER PROCEDURE dbo.sp_GetAllContacts
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  SELECT Id, Name, PhoneNumber, Email, Address, CreatedAt
+  FROM dbo.Contacts
+  ORDER BY Id ASC;
+END
+GO
+
 -- Google-like autocomplete source: distinct names starting with the typed prefix.
 -- Prefix LIKE (no leading wildcard) seeks the name index; TOP limits the scan.
 CREATE OR ALTER PROCEDURE dbo.sp_GetContactSuggestions

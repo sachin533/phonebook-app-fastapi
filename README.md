@@ -150,6 +150,23 @@ docker compose build --no-cache
 - **Docker Desktop not running** — start Docker Desktop and wait until it
   reports healthy before `docker compose up`.
 
+## Import / Export (JSON)
+
+The Search screen has **Export JSON** (downloads all contacts as
+`contacts.json`) and **Import JSON** (uploads a `.json` file) buttons.
+
+```text
+POST /api/contacts/import   [{name, phoneNumber, email?, address?}, ...]
+GET  /api/contacts/export   -> [{id, name, phoneNumber, email, address, createdAt}, ...]
+```
+
+- Import validates every row with the same rules as Add Contact and reports
+  `{imported, skipped, errors}`; `PhoneNumber` is unique so existing phones
+  (and in-file duplicates) are skipped, never duplicated. Non-array bodies
+  get 400, batches are capped at 5000 rows.
+- Export streams the full ordered list from `sp_GetAllContacts` with an
+  attachment download header.
+
 ## Project layout
 
 ```text

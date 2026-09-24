@@ -5,7 +5,7 @@ import ContactForm from './components/ContactForm.vue';
 import ContactList from './components/ContactList.vue';
 import Pagination from './components/Pagination.vue';
 import LoginView from './components/LoginView.vue';
-import { getContacts, createContact, updateContact, deleteContact, getToken, setToken } from './services/contactApi';
+import { getContacts, createContact, updateContact, deleteContact, getToken, setToken, exportContacts, importContacts } from './services/contactApi';
 
 // Screen router: 'search' | 'add' | 'edit'. Add and search are never shown together.
 const isLoggedIn = ref(Boolean(getToken()));
@@ -165,6 +165,63 @@ function changePage(page) {
   loadContacts(page);
 }
 
+async function exportJson() {
+  error.value = '';
+  message.value = '';
+  try {
+    const items = await exportContacts();
+    const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'contacts.json';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    message.value = `Exported ${items.length} contact(s).`;
+  } catch (e) {
+    error.value = e.message || 'Export failed.';
+  }
+}
+
+function triggerImport(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => importJson(reader.result);
+  reader.onerror = () => { error.value = 'Could not read the selected file.'; };
+  reader.readAsText(file);
+}
+
+async function importJson(text) {
+  error.value = '';
+  message.value = '';
+  let items;
+  try {
+    items = JSON.parse(text);
+  } catch {
+    error.value = 'Invalid JSON file: could not parse its contents.';
+    return;
+  }
+  if (!Array.isArray(items)) {
+    error.value = 'Invalid import file: expected a JSON array of contacts.';
+    return;
+  }
+  try {
+    const result = await importContacts(items);
+    const parts = [`Imported ${result.imported} contact(s)`, `${result.skipped} skipped (duplicates)`];
+    message.value = parts.join(', ') + '.';
+    if (result.errors?.length) {
+      error.value = result.errors.slice(0, 5).join(' ');
+    }
+    await loadContacts(1);
+  } catch (e) {
+    error.value = e.message || 'Import failed.';
+  }
+}
+
 onMounted(() => { if (isLoggedIn.value) loadContacts(1); });
 </script>
 
@@ -197,6 +254,10 @@ onMounted(() => { if (isLoggedIn.value) loadContacts(1); });
     <section v-if="view === 'search'">
       <div class="toolbar">
         <SearchBox v-model="searchTerm" @search="search" @type="onType" />
+        <button class="secondary" @click="exportJson">Export JSON</button>
+        <label class="secondary file-label">Import JSON
+          <input type="file" accept=".json,application/json" hidden @change="triggerImport" />
+        </label>
       </div>
       <ContactList
         :contacts="contacts"
